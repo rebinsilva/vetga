@@ -13,6 +13,9 @@ import h5py
 
 # for undirecting the graph
 from bisect import bisect_left
+import array
+import itertools
+import gc
 
 #  used by download_file_from_google_drive
 import requests
@@ -245,18 +248,21 @@ class GraphIO(object):
             print("Converting directed edges to undirected ...")
 
         # Remove duplicates pairs from src and dst
-        g = list(zip(src, dst))
-        g.sort()
-        src_n = []
-        dst_n = []
+        g = [x for x, _ in itertools.groupby(sorted(zip(src, dst)))]
+        gc.collect()
+        src_n = array.array('I', [])
+        dst_n = array.array('I', [])
         for x, y in tq(g):
             index = bisect_left(g, (y, x))
             if index == len(g) or g[index] != (y, x):
                 src_n.append(y)
                 dst_n.append(x)
+        del g
+        gc.collect()
 
         src_n = np.array(src_n, dtype=src.dtype)
         dst_n = np.array(dst_n, dtype=dst.dtype)
+        gc.collect()
 
         if verbose > 0:
             print(f"Finished converting directed to undirected by inserting {len(src_n)} new edges.")
